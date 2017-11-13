@@ -36,25 +36,21 @@ class Individual_Grid(object):
         self.genome = copy.deepcopy(genome)
         self._fitness = None
 
-    # Turn the genome into a level string (easy for this genome)
-    def to_level(self):
-        return self.genome
-
-
     # Update this individual's estimate of its fitness.
     # This can be expensive so we do it once and then cache the result.
     def calculate_fitness(self):
         measurements = metrics.metrics(self.to_level())
         # Print out the possible measurements or look at the implementation of metrics.py for other keys:
         # print(measurements.keys())
+        #print(measurements)
         # Default fitness function: Just some arbitrary combination of a few criteria.  Is it good?  Who knows?
         # STUDENT Modify this, and possibly add more metrics.  You can replace this with whatever code you like.
         coefficients = dict(
             meaningfulJumpVariance=0.5,
-            negativeSpace=0.6,
+            negativeSpace=10.6,
             pathPercentage=0.5,
             emptyPercentage=0.6,
-            linearity=-0.5,
+            linearity=0.5,
             solvability=2.0
         )
         self._fitness = sum(map(lambda m: coefficients[m] * measurements[m],
@@ -93,9 +89,11 @@ class Individual_Grid(object):
                 # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
                 pass
         # do mutation; note we're returning a one-element tuple here
-        #return (Individual_Grid(new_genome),)
-        return (Individual_Grid(new_genome))
+        return (Individual_Grid(new_genome),)
 
+    # Turn the genome into a level string (easy for this genome)
+    def to_level(self):
+        return self.genome
 
     # These both start with every floor tile filled with Xs
     # STUDENT Feel free to change these
@@ -171,7 +169,7 @@ class Individual_DE(object):
         penalties = 0
         # STUDENT For example, too many stairs are unaesthetic.  Let's penalize that
         if len(list(filter(lambda de: de[1] == "6_stairs", self.genome))) > 5:
-            penalties -= 2
+            penalties -= 0
         # STUDENT If you go for the FI-2POP extra credit, you can put constraint calculation in here too and cache it in a new entry in __slots__.
         self._fitness = sum(map(lambda m: coefficients[m] * measurements[m],
                                 coefficients)) + penalties
@@ -345,17 +343,43 @@ class Individual_DE(object):
 
 Individual = Individual_Grid
 
-# Population consists of many parent individuals to choose from
-# MAKE SURE YOU ACCOUNT FOR HOW MANY CHILDREN THERE ARE IN RESULTS!
+# (1) Calculate total_sum of all fitnesses in population.
+# (2) Generate random number rand_num from interval 0 to SUM.
+# (3) Go through population, and select individual when partial_sum is more than or equal to rand_num.
+# (4) Repeat steps 2 and 3 until an individual is selected.
+def roulette_wheel(population):
+	total_sum = 0
+	#print(len(population))
+	for i in range(0, len(population)):
+		total_sum += population[i].fitness()
+		#print(population[i].fitness())
+
+	rand_num = random.uniform(0, total_sum)
+	partial_sum = 0
+	for i in range(0,len(population)):
+		partial_sum += population[i].fitness()
+		print("\n {0} >= {1}".format(partial_sum, rand_num))
+		if partial_sum >= rand_num:
+			print("We stopped at individual {}. \n".format(i))
+			return population[i]
+
+	return population[0]
+
+
 def generate_successors(population):
     results = []
     # STUDENT Design and implement this
     # Hint: Call generate_children() on some individuals and fill up results.
-    if len(population) > 1:
-    	new_child1 = population[0].generate_children(population[1])
-    	#new_child2 = population[3].generate_children(population[4])
-    	results.append(new_child1)
-    	#results.append(new_child2)
+
+    parent1 = roulette_wheel(population)
+    parent2 = roulette_wheel(population)
+    child = parent1.generate_children(parent2)
+    results.append(child)
+    # for i in range(0,len(population)):
+    # 	parent1 = roulette_wheel(population)
+    # 	parent2 = roulette_wheel(population)
+    # 	child = parent1.generate_children(parent2)
+    # 	results.append(child)
     return results
 
 
@@ -370,7 +394,7 @@ def ga():
     with mpool.Pool(processes=os.cpu_count()) as pool:
         init_time = time.time()
         # STUDENT (Optional) change population initialization
-        population = [Individual.random_individual() if random.random() < 0.9
+        population = [Individual.empty_individual() if random.random() < 0.9
                       else Individual.empty_individual()
                       for _g in range(pop_limit)]
         # But leave this line alone; we have to reassign to population because we get a new population that has more cached stuff in it.
@@ -386,13 +410,6 @@ def ga():
         try:
             while True:
                 now = time.time()
-
-                print("The length of the population is: ")    
-        		#print(len(population))
-
-                if len(population) <= 25:
-                    break
-
                 # Print out statistics
                 if generation > 0:
                     best = max(population, key=Individual.fitness)
@@ -407,7 +424,7 @@ def ga():
                 # STUDENT Determine stopping condition
                 stop_condition = False
                 if stop_condition:
-                	break
+                    break
                 # STUDENT Also consider using FI-2POP as in the Sorenson & Pasquier paper
                 gentime = time.time()
                 next_population = generate_successors(population)
@@ -422,11 +439,6 @@ def ga():
                 population = next_population
         except KeyboardInterrupt:
             pass
-
-        print('\n')
-        print("The length of the population is: ")    
-        print(len(population))
-        print('\n')
     return population
 
 

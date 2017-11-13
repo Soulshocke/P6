@@ -88,7 +88,8 @@ class Individual_Grid(object):
                 # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
                 pass
         # do mutation; note we're returning a one-element tuple here
-        return (Individual_Grid(new_genome),)
+        #return (Individual_Grid(new_genome),)
+        return (Individual_Grid(new_genome))
 
     # Turn the genome into a level string (easy for this genome)
     def to_level(self):
@@ -347,38 +348,39 @@ Individual = Individual_Grid
 # (3) Go through population, and select individual when partial_sum is more than or equal to rand_num.
 # (4) Repeat steps 2 and 3 until an individual is selected.
 def roulette_wheel(population):
-	total_sum = 0
-	#print(len(population))
-	for i in range(0, len(population)):
-		total_sum += population[i].fitness()
-		#print(population[i].fitness())
+    total_sum = 0
+    #print(len(population))
+    for i in range(0, len(population)):
+        total_sum += population[i].fitness()
+        #print(population[i].fitness())
 
-	rand_num = random.uniform(0, total_sum)
-	partial_sum = 0
-	for i in range(0,len(population)):
-		partial_sum += population[i].fitness()
-		print("\n {0} >= {1}".format(partial_sum, rand_num))
-		if partial_sum >= rand_num:
-			print("We stopped at individual {}. \n".format(i))
-			return population[i]
+    rand_num = random.uniform(0, total_sum)
+    partial_sum = 0
+    for i in range(0,len(population)):
+        partial_sum += population[i].fitness()
+        print("\n {0} >= {1}".format(partial_sum, rand_num))
+        if partial_sum >= rand_num:
+            print("We stopped at individual {}. \n".format(i))
+            return population[i]
 
-	return population[0]
-
+    return population[0]
 
 def generate_successors(population):
     results = []
+    if len(population) > 1:
+        for i in range(0, len(population)):
+            parent1 = roulette_wheel(population)
+            parent2 = roulette_wheel(population)
+            child = parent1.generate_children(parent2)
+            results.append(child)
     # STUDENT Design and implement this
     # Hint: Call generate_children() on some individuals and fill up results.
-
-    parent1 = roulette_wheel(population)
-    parent1.generate_children(population[1])
-    results.append(parent1)
     return results
 
 
 def ga():
     # STUDENT Feel free to play with this parameter
-    pop_limit = 480
+    pop_limit = 120
     # Code to parallelize some computations
     batches = os.cpu_count()
     if pop_limit % batches != 0:
@@ -403,6 +405,8 @@ def ga():
         try:
             while True:
                 now = time.time()
+                if len(population) <= 25:
+                    break
                 # Print out statistics
                 if generation > 0:
                     best = max(population, key=Individual.fitness)
@@ -415,8 +419,8 @@ def ga():
                             f.write("".join(row) + "\n")
                 generation += 1
                 # STUDENT Determine stopping condition
-                stop_condition = False
-                if stop_condition:
+                stop_condition = generation
+                if stop_condition > 1:
                     break
                 # STUDENT Also consider using FI-2POP as in the Sorenson & Pasquier paper
                 gentime = time.time()
