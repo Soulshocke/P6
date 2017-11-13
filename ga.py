@@ -46,7 +46,7 @@ class Individual_Grid(object):
         # STUDENT Modify this, and possibly add more metrics.  You can replace this with whatever code you like.
         coefficients = dict(
             meaningfulJumpVariance=0.5,
-            negativeSpace=0.6,
+            negativeSpace=2.5,
             pathPercentage=0.5,
             emptyPercentage=0.6,
             linearity=-0.5,
@@ -84,6 +84,7 @@ class Individual_Grid(object):
         right = width - 1
         for y in range(height):
             for x in range(left, right):
+                
                 # STUDENT Which one should you take?  Self, or other?  Why?
                 # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
                 pass
@@ -113,8 +114,10 @@ class Individual_Grid(object):
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        g = [random.choices(options, k=width) for row in range(height)]
-        g[15][:] = ["X"] * width
+        probs = [0.85,0.01,0.02,0.01,0.03,0.03,0.01,0.01,0.02]
+        #probs = [1,0,0,0,0,0,0,0,0]
+        g = [random.choices(options, weights=probs, k=width) for row in range(height)]
+        #g[15][:] = ["X"] * width
         g[14][0] = "m"
         g[7][-1] = "v"
         g[8:14][-1] = ["f"] * 6
@@ -163,7 +166,7 @@ class Individual_DE(object):
             negativeSpace=0.6,
             pathPercentage=0.5,
             emptyPercentage=0.6,
-            linearity=-0.5,
+            linearity=0.5,
             solvability=2.0
         )
         penalties = 0
@@ -365,22 +368,50 @@ def roulette_wheel(population):
 
     return population[0]
 
+
+def tournament_selection(population):
+    #randomly choose k individuals
+    smpl = []
+    smpl = random.sample(population, k=20)
+    
+    max_fit = 0
+    max_pop = smpl[0]
+    for pop in smpl:
+        if pop.fitness() >= max_fit:
+            max_fit = pop.fitness()
+            max_pop = pop
+    return max_pop
+
+
 def generate_successors(population):
     results = []
-    if len(population) > 1:
-        for i in range(0, len(population)):
-            parent1 = roulette_wheel(population)
-            parent2 = roulette_wheel(population)
-            child = parent1.generate_children(parent2)
-            results.append(child)
+    # if len(population) > 1:
+    #     for i in range(0, len(population)):
+    #         parent1 = roulette_wheel(population)
+    #         parent2 = tournament_selection(population)
+    #         child = parent1.generate_children(parent2)
+    #         results.append(child)
     # STUDENT Design and implement this
     # Hint: Call generate_children() on some individuals and fill up results.
+
+    
+    x = 0
+    while x < len(population):
+        #choose between which selection function
+        functions = [roulette_wheel, tournament_selection]
+        func_weights = [0.5,0.5]
+        func = random.choices(functions, weights=func_weights, k=1)
+        parent = func[0](population)
+        child = parent.generate_children(population[x])
+        results.append(child)
+        x += 1
     return results
 
 
 def ga():
     # STUDENT Feel free to play with this parameter
-    pop_limit = 120
+
+    pop_limit = 32
     # Code to parallelize some computations
     batches = os.cpu_count()
     if pop_limit % batches != 0:
@@ -418,9 +449,14 @@ def ga():
                         for row in best.to_level():
                             f.write("".join(row) + "\n")
                 generation += 1
+                print(str(generation))
                 # STUDENT Determine stopping condition
                 stop_condition = generation
                 if stop_condition > 1:
+                # stop_condition = False
+                # if generation is 2:
+                #     stop_condition = True
+                # if stop_condition:
                     break
                 # STUDENT Also consider using FI-2POP as in the Sorenson & Pasquier paper
                 gentime = time.time()
