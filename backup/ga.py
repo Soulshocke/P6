@@ -36,6 +36,11 @@ class Individual_Grid(object):
         self.genome = copy.deepcopy(genome)
         self._fitness = None
 
+    # Turn the genome into a level string (easy for this genome)
+    def to_level(self):
+        return self.genome
+
+
     # Update this individual's estimate of its fitness.
     # This can be expensive so we do it once and then cache the result.
     def calculate_fitness(self):
@@ -88,11 +93,9 @@ class Individual_Grid(object):
                 # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
                 pass
         # do mutation; note we're returning a one-element tuple here
-        return (Individual_Grid(new_genome),)
+        #return (Individual_Grid(new_genome),)
+        return (Individual_Grid(new_genome))
 
-    # Turn the genome into a level string (easy for this genome)
-    def to_level(self):
-        return self.genome
 
     # These both start with every floor tile filled with Xs
     # STUDENT Feel free to change these
@@ -342,37 +345,17 @@ class Individual_DE(object):
 
 Individual = Individual_Grid
 
-# (1) Calculate total_sum of all fitnesses in population.
-# (2) Generate random number rand_num from interval 0 to SUM.
-# (3) Go through population, and select individual when partial_sum is more than or equal to rand_num.
-# (4) Repeat steps 2 and 3 until an individual is selected.
-def roulette_wheel(population):
-	total_sum = 0
-	#print(len(population))
-	for i in range(0, len(population)):
-		total_sum += population[i].fitness()
-		#print(population[i].fitness())
-
-	rand_num = random.uniform(0, total_sum)
-	partial_sum = 0
-	for i in range(0,len(population)):
-		partial_sum += population[i].fitness()
-		print("\n {0} >= {1}".format(partial_sum, rand_num))
-		if partial_sum >= rand_num:
-			print("We stopped at individual {}. \n".format(i))
-			return population[i]
-
-	return population[0]
-
-
+# Population consists of many parent individuals to choose from
+# MAKE SURE YOU ACCOUNT FOR HOW MANY CHILDREN THERE ARE IN RESULTS!
 def generate_successors(population):
     results = []
     # STUDENT Design and implement this
     # Hint: Call generate_children() on some individuals and fill up results.
-
-    parent1 = roulette_wheel(population)
-    parent1.generate_children(population[1])
-    results.append(parent1)
+    if len(population) > 1:
+    	new_child1 = population[0].generate_children(population[1])
+    	#new_child2 = population[3].generate_children(population[4])
+    	results.append(new_child1)
+    	#results.append(new_child2)
     return results
 
 
@@ -403,6 +386,13 @@ def ga():
         try:
             while True:
                 now = time.time()
+
+                print("The length of the population is: ")    
+        		#print(len(population))
+
+                if len(population) <= 25:
+                    break
+
                 # Print out statistics
                 if generation > 0:
                     best = max(population, key=Individual.fitness)
@@ -417,7 +407,7 @@ def ga():
                 # STUDENT Determine stopping condition
                 stop_condition = False
                 if stop_condition:
-                    break
+                	break
                 # STUDENT Also consider using FI-2POP as in the Sorenson & Pasquier paper
                 gentime = time.time()
                 next_population = generate_successors(population)
@@ -432,6 +422,11 @@ def ga():
                 population = next_population
         except KeyboardInterrupt:
             pass
+
+        print('\n')
+        print("The length of the population is: ")    
+        print(len(population))
+        print('\n')
     return population
 
 
