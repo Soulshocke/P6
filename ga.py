@@ -46,7 +46,7 @@ class Individual_Grid(object):
         # STUDENT Modify this, and possibly add more metrics.  You can replace this with whatever code you like.
         coefficients = dict(
             meaningfulJumpVariance=0.5,
-            negativeSpace=2.5,
+            negativeSpace=0.6,
             pathPercentage=0.5,
             emptyPercentage=0.6,
             linearity=-0.5,
@@ -80,14 +80,86 @@ class Individual_Grid(object):
         new_genome = copy.deepcopy(self.genome)
         # Leaving first and last columns alone...
         # do crossover with other
+        # doing single-point crossover (for now)
         left = 1
         right = width - 1
         for y in range(height):
+            cross_point = random.randint(left, right)
             for x in range(left, right):
-                
                 # STUDENT Which one should you take?  Self, or other?  Why?
                 # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
-                pass
+                
+                # positive favor -> choose other
+                # negative favor -> choose self
+                favor = 0
+                # favor no one-block gaps, more gaps is bad
+                gap_favor_self = 0
+                gap_favor_other = 0
+                # if space below is empty and two spaces below solid, that's a one-space gap
+                if (y + 2) < height and new_genome[y+1][x] is "-" or "o":
+                   if (y + 2) < height and new_genome[y+2][x] is not "-" or "o" or "E":
+                       gap_favor_self += 1 
+                # same thing for space above
+                if (y - 2) >= 0 and new_genome[y-1][x] is "-" or "o":
+                   if (y - 2) >= 0 and new_genome[y-2][x] is not "-" or "o" or "E":
+                       gap_favor_other += 1
+                # same thing for other genome
+                if (y + 2) < height and other.genome[y+1][x] is "-" or "o":
+                   if (y + 2) < height and other.genome[y+2][x] is not "-" or "o" or "E":
+                       gap_favor_other += 1
+                if (y - 2) >= 0 and other.genome[y-1][x] is "-" or "o":
+                   if (y - 2) >= 0 and other.genome[y-2][x] is not "-" or "o" or "E":
+                       gap_favor_other += 1
+                if gap_favor_other < gap_favor_self:
+                    favor += 1
+                else:
+                    favor -= 1
+                
+                # delete all tops w/out a segment
+                if (y + 1) < height and new_genome[y][x] is "T" and new_genome[y+1][x] is not "|":
+                    new_genome[y][x] = '-'
+                
+                #ground pipe segments
+                if new_genome[y][x] is "|" or new_genome[y][x] is "T":
+
+                    #check if connected down to the ground
+                    y2 = y
+                    while y2 < 15:
+                        if new_genome[y2+1][x] == "|":     
+                            y2 += 1
+                        else:
+                            new_genome[y][x] = "-"
+                            break
+                
+                # top all segments or add to them
+                if (y - 1) >= 0 and new_genome[y][x] is "|":
+                    """cont = ['|','T']
+                    if (y - 1) is 0:
+                        cont_probs = [0, 1]
+                    else:
+                        cont_probs = [0.2, 0.8]
+                    pipe = random.choices(cont, weights=cont_probs, k=1)"""
+                    pipe = "T"
+                    new_genome[y-1][x] = pipe
+                
+                
+                # does crossover based on rows
+                if x > cross_point:
+                    # if there are less one-space gaps in the other genome, crossover
+                    # otherwise stays the same
+                    #new_genome[y][x] = other.genome[y][x]
+                    if favor >= 0:
+                        new_genome[y][x] = other.genome[y][x]
+                    # new_genome[y][x] = other or self.genome[y][x]
+                    # choose based on fitness?
+                    # fitness doesn't take constraints into account, lots of constraints happen here
+                    """if self.fitness() > other.fitness():
+                        new_genome[y][x] = self.genome[y][x]
+                    if other.fitness() >= self.fitness():
+                        new_genome[y][x] = other.genome[y][x]"""
+                        
+                
+                
         # do mutation; note we're returning a one-element tuple here
         return (Individual_Grid(new_genome))
 
@@ -113,10 +185,11 @@ class Individual_Grid(object):
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        probs = [0.85,0.01,0.02,0.01,0.03,0.03,0.01,0.01,0.02]
-        #probs = [1,0,0,0,0,0,0,0,0]
+        probs = [0.91,0.02,0.01,0.01,0.01,0.01,0.01,0.01,0.01]
         g = [random.choices(options, weights=probs, k=width) for row in range(height)]
-        #g[15][:] = ["X"] * width
+        g[15][:] = ["X"] * width
+        g[14][6] = "|"
+        g[14][20] = "|"
         g[14][0] = "m"
         g[7][-1] = "v"
         g[8:14][-1] = ["f"] * 6
@@ -165,7 +238,7 @@ class Individual_DE(object):
             negativeSpace=0.6,
             pathPercentage=0.5,
             emptyPercentage=0.6,
-            linearity=0.5,
+            linearity=-0.5,
             solvability=2.0
         )
         penalties = 0
@@ -387,6 +460,10 @@ def generate_successors(population):
     # Hint: Call generate_children() on some individuals and fill up results.
     
     x = 0
+    # Do a similar thing to tournament selection and just use 10 random parent, shorter loop
+    # OR JUST ITERATE YOU DUNCE
+    #smpl = []
+    #smpl = random.sample(population, k=20)
     while x < len(population):
         #choose between which selection function
         functions = [roulette_wheel, tournament_selection]
@@ -395,12 +472,13 @@ def generate_successors(population):
         parent = func[0](population)
         child = parent.generate_children(population[x])
         results.append(child)
+        x += 1
     return results
 
 
 def ga():
     # STUDENT Feel free to play with this parameter
-    pop_limit = 32
+    pop_limit = 480
     # Code to parallelize some computations
     batches = os.cpu_count()
     if pop_limit % batches != 0:
@@ -436,10 +514,9 @@ def ga():
                         for row in best.to_level():
                             f.write("".join(row) + "\n")
                 generation += 1
-                print(str(generation))
                 # STUDENT Determine stopping condition
                 stop_condition = False
-                if generation is 5:
+                if generation is 4:
                     stop_condition = True
                 if stop_condition:
                     break
