@@ -19,7 +19,7 @@ options = [
     "B",  # a breakable block
     "o",  # a coin
     "|",  # a pipe segment
-    "T",  # a pipe top
+    "T",  # a pipe top  (must be on top of a pipe sergment)
     "E",  # an enemy
     #"f",  # a flag, do not generate
     #"v",  # a flagpole, do not generate
@@ -109,17 +109,49 @@ class Individual_Grid(object):
             g[col][-1] = "X"
         return cls(g)
 
+
     @classmethod
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        probs = [0.85,0.01,0.02,0.01,0.03,0.03,0.01,0.01,0.02]
+        probs = [0.75,0.10,0.02,0.01,0.03,0.04,0.01,0.01,0.02]
         #probs = [1,0,0,0,0,0,0,0,0]
         g = [random.choices(options, weights=probs, k=width) for row in range(height)]
-        #g[15][:] = ["X"] * width
-        g[14][0] = "m"
-        g[7][-1] = "v"
-        g[8:14][-1] = ["f"] * 6
+
+        # *** Below is what replaces the random choices: ***
+        # ----------------------------------------------------------------------------------------
+
+        g[11][6] = "|"      # below loop works if these pipes are still generated
+        g[12][6] = "|"
+        g[13][6] = "|"
+        g[14][6] = "|"
+
+        # Replaces all floating pipes with empty spaces.
+        y = 13          #1 space above ground floor
+        while y > -1:
+            for x in range(0, width):
+                if g[y][x] == "|" or g[y][x] == "T":
+
+                    #check if connected down to the ground
+                    y2 = y
+                    while y2 < 15:
+                        if g[y2+1][x] == "|":     
+                            y2 += 1
+                        else:
+                            g[y][x] = "-"
+                            break
+            y -= 1      
+
+        #test = 15
+        g[15][:] = ["X"] * width        # guarantees a solid floor
+
+        # g[14][2] = "|"
+        # if g[14][2] == "|":
+        #     print("yee")
+
+        g[14][0] = "m"                  # mario start point (do not change)
+        g[7][-1] = "v"                  # (leave alone) flagpole
+        g[8:14][-1] = ["f"] * 6         # (leave alone) flag
         g[14:16][-1] = ["X", "X"]
         return cls(g)
 
@@ -395,6 +427,7 @@ def generate_successors(population):
         parent = func[0](population)
         child = parent.generate_children(population[x])
         results.append(child)
+        x += 1
     return results
 
 
@@ -439,7 +472,7 @@ def ga():
                 print(str(generation))
                 # STUDENT Determine stopping condition
                 stop_condition = False
-                if generation is 5:
+                if generation is 2:
                     stop_condition = True
                 if stop_condition:
                     break
