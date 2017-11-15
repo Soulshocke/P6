@@ -25,6 +25,7 @@ options = [
     #"v",  # a flagpole, do not generate
     #"m"  # mario's start position, do not generate
 ]
+probs = [0.60,0.05,0.02,0.01,0.03,0.04,0.20,0.02,0.03]
 
 # The level as a grid of tiles
 
@@ -64,7 +65,7 @@ class Individual_Grid(object):
 
     # Mutate a genome into a new genome.  Note that this is a _genome_, not an individual!
     # (1) Only mutate if fitness is found to be lower than 5.
-    # (2) Randomly choose the number of metrics to be modified.
+    # (2) Randomly choose the number of metrics to be modified, up to half.
     # (3) Randomly choose which such metrics will be modified.
     def mutate(self, genome):
         # STUDENT implement a mutation operator, also consider not mutating this individual
@@ -73,16 +74,66 @@ class Individual_Grid(object):
 
         if self.fitness() < 5:
 
-            num_mutations = random.randint(1,9)
-            mutation_probs = [0.12,0.11,0.11,0.11,0.11,0.11,0.11,0.11,0.11]
-            chosen_mutations = random.choices(options, weights=mutation_probs, k=num_mutations)
+        #     # Easy access to each option's respective global weight.
+        #     option_probs = {}
+        #     i = 0
+        #     for option in options:
+        #         option_probs[option] = probs[i]
+        #         i += 1
+
+        #     num_mutations = random.randint(1,5)
+        #     mutation_probs = [0.12,0.11,0.11,0.11,0.11,0.11,0.11,0.11,0.11]
+        #     chosen_mutations = random.sample(options, num_mutations)
+
+        #     # Overwrite weights for mutated options.
+        #     for chosen in chosen_mutations:
+        #         option_probs[chosen] = random.uniform(0.01,1)
+        #     new_probs = list(option_probs.values())
 
 
-            left = 1
-            right = width - 1
-            for y in range(height):
-                for x in range(left, right):
-                    pass    
+        #     # *** Overwrites some existing options with mutations. ***
+        #     genome = [random.choices(options, weights=new_probs, k=width) for row in range(height)]
+
+            # left = 0
+            # right = width - 1
+            # for y in range(height):
+            #     for x in range(left, right):
+
+
+            #         # *** Replaces all floating pipes with empty spaces. ***
+            #         if genome[y][x] == "|" or genome[y][x] == "T":
+
+            #             # ** Also gets rid of grounded tops without a segment below. **
+            #             if y == 14 and genome[y][x] == "T":
+            #                 genome[y][x] = "-"
+
+            #             # ** Also adds top to all topless segments, ONLY IF segment is not at the highest. (prevents breaking) **
+            #             if y > 1 and genome[y][x] == "|" and genome[y-1][x] != "|" and genome[y-1][x] != "T":
+            #                 genome[y-1][x] = "T"    
+
+            #             # ** Makes sure to not delete pipes actually extending from ground. **
+            #             y2 = y
+            #             while y2 < height-1:
+            #                 if y == 14 and genome[y2+1][x:x+2] == ["X","X"]:
+            #                     break
+            #                 elif genome[y2+1][x] == "|":   
+            #                     y2 += 1
+            #                 else:
+            #                     if genome[y-1][x] == "T":     # delete the new top too
+            #                         genome[y-1][x] = "-"     
+            #                     genome[y][x] = "-"
+            #                     break
+
+            # # *** Removes anything that is within Mario's spawn radius. (so he can get out)***
+            # y = 14
+            # while y > 9:
+            #     for x in range(0, 5):
+            #         if y == 14 and x == 0:      # don't destroy poor Mario
+            #              continue
+            #         else:
+            #             genome[y][x] = "-"
+            #     y -= 1 
+
             return genome
 
     # Create zero or more children from self and other
@@ -148,37 +199,14 @@ class Individual_Grid(object):
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        probs = [0.60,0.05,0.02,0.01,0.03,0.04,0.20,0.02,0.03]
         g = [random.choices(options, weights=probs, k=width) for row in range(height)]
 
         # *** Below is what overwrites the random choices: ***
         # ----------------------------------------------------------------------------------------
      
-        #g[0][6] = "X"    #<-- this breaks everything!
-        # g[1][6] = "T"    # below loop works if these pipes are still generated       
-        # g[2][6] = "|"
-        # g[3][6] = "|"
-        # g[4][6] = "|"
-        # g[5][6] = "|"
-        # g[6][6] = "|"
-        # g[7][6] = "|"
-        # g[8][6] = "|"
-        # g[9][6] = "|"
-        # g[10][6] = "|"
-        # g[11][6] = "|"
-        # g[12][6] = "|"
-        # g[13][6] = "|"
-        # g[14][6] = "|"
-
-        # g[13][9] = "|"  # test pipe topping
-        # g[14][9] = "|"
-        # g[14][3] = "T"  #<-- this should not be topped (or even exist)
+        # g[0][6] = "X"    #<-- this breaks everything!
          
         g[15][:] = ["X"] * width        # guarantees a solid floor
-        # g[15][6:8] = ["X","X"]
-        # if g[15][6:8] == ["X","X"]:
-        #     print("Yep, there is definitely solid ground here.")
-
 
         y = 0          
         while y < height: 
@@ -213,7 +241,7 @@ class Individual_Grid(object):
                     # ** Makes sure to not delete pipes actually extending from ground. **
                     y2 = y
                     while y2 < height-1:
-                        if g[y2+1][x:x+2] == ["X","X"]:
+                        if y == 14 and g[y2+1][x:x+2] == ["X","X"]:
                             #print("We have hit the ground floor!")
                             break
                         elif g[y2+1][x] == "|":
@@ -225,8 +253,18 @@ class Individual_Grid(object):
                                 g[y-1][x] = "-"     
                             g[y][x] = "-"
                             break
-                    
             y += 1 
+
+
+        # *** Removes anything that is within Mario's spawn radius. (so he can get out)***
+        y = 14
+        while y > 9:
+            for x in range(0, 5):
+                if y == 14 and x == 0:      # don't destroy poor Mario
+                     continue
+                else:
+                    g[y][x] = "-"
+            y -= 1
 
 
         g[14][0] = "m"                  # Mario start point (do not change)
@@ -377,8 +415,8 @@ class Individual_DE(object):
 
     def generate_children(self, other):
         # STUDENT How does this work?  Explain it in your writeup.
-        pa = random.randint(0, len(self.genome) - 1)
-        pb = random.randint(0, len(other.genome) - 1)
+        pa = random.randint(0, len(self.genome) - 1) if len(self.genome) > 0 else 0
+        pb = random.randint(0, len(other.genome) - 1) if len(other.genome) > 0 else 0
         a_part = self.genome[:pa] if len(self.genome) > 0 else []
         b_part = other.genome[pb:] if len(other.genome) > 0 else []
         ga = a_part + b_part
@@ -500,10 +538,6 @@ def generate_successors(population):
     # Hint: Call generate_children() on some individuals and fill up results.
     
     x = 0
-    # Do a similar thing to tournament selection and just use 10 random parent, shorter loop
-    # OR JUST ITERATE YOU DUNCE
-    #smpl = []
-    #smpl = random.sample(population, k=20)
     while x < len(population):
         #choose between which selection function
         functions = [roulette_wheel, tournament_selection]
@@ -557,7 +591,7 @@ def ga():
                 print(str(generation))
                 # STUDENT Determine stopping condition
                 stop_condition = False
-                if generation is 3:
+                if generation is 7:
                     stop_condition = True
                 if stop_condition:
                     break
