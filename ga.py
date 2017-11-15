@@ -63,17 +63,27 @@ class Individual_Grid(object):
         return self._fitness
 
     # Mutate a genome into a new genome.  Note that this is a _genome_, not an individual!
+    # (1) Only mutate if fitness is found to be lower than 5.
+    # (2) Randomly choose the number of metrics to be modified.
+    # (3) Randomly choose which such metrics will be modified.
     def mutate(self, genome):
         # STUDENT implement a mutation operator, also consider not mutating this individual
         # STUDENT also consider weighting the different tile types so it's not uniformly random
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
 
-        left = 1
-        right = width - 1
-        for y in range(height):
-            for x in range(left, right):
-                pass
-        return genome
+        if self.fitness() < 5:
+
+            num_mutations = random.randint(1,9)
+            mutation_probs = [0.12,0.11,0.11,0.11,0.11,0.11,0.11,0.11,0.11]
+            chosen_mutations = random.choices(options, weights=mutation_probs, k=num_mutations)
+
+
+            left = 1
+            right = width - 1
+            for y in range(height):
+                for x in range(left, right):
+                    pass    
+            return genome
 
     # Create zero or more children from self and other
     def generate_children(self, other):
@@ -112,7 +122,8 @@ class Individual_Grid(object):
                 pass
 
         # do mutation; note we (were) returning a one-element tuple here
-        return (Individual_Grid(new_genome))
+        #return (Individual_Grid(new_genome))
+        return (Individual_Grid(self.mutate(new_genome)))
 
     # Turn the genome into a level string (easy for this genome)
     def to_level(self):
@@ -137,32 +148,31 @@ class Individual_Grid(object):
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        probs = [0.75,0.10,0.02,0.01,0.03,0.04,0.01,0.01,0.02]
-        #probs = [1,0,0,0,0,0,0,0,0]
+        probs = [0.60,0.05,0.02,0.01,0.03,0.04,0.20,0.02,0.03]
         g = [random.choices(options, weights=probs, k=width) for row in range(height)]
 
         # *** Below is what overwrites the random choices: ***
         # ----------------------------------------------------------------------------------------
      
         #g[0][6] = "X"    #<-- this breaks everything!
-        g[1][6] = "T"    # below loop works if these pipes are still generated       
-        g[2][6] = "|"
-        g[3][6] = "|"
-        g[4][6] = "|"
-        g[5][6] = "|"
-        g[6][6] = "|"
-        g[7][6] = "|"
-        g[8][6] = "|"
-        g[9][6] = "|"
-        g[10][6] = "|"
-        g[11][6] = "|"
-        g[12][6] = "|"
-        g[13][6] = "|"
-        g[14][6] = "|"
+        # g[1][6] = "T"    # below loop works if these pipes are still generated       
+        # g[2][6] = "|"
+        # g[3][6] = "|"
+        # g[4][6] = "|"
+        # g[5][6] = "|"
+        # g[6][6] = "|"
+        # g[7][6] = "|"
+        # g[8][6] = "|"
+        # g[9][6] = "|"
+        # g[10][6] = "|"
+        # g[11][6] = "|"
+        # g[12][6] = "|"
+        # g[13][6] = "|"
+        # g[14][6] = "|"
 
-        g[13][9] = "|"  # test pipe topping
-        g[14][9] = "|"
-        g[14][3] = "T"  #<-- this should not be topped (or even exist)
+        # g[13][9] = "|"  # test pipe topping
+        # g[14][9] = "|"
+        # g[14][3] = "T"  #<-- this should not be topped (or even exist)
          
         g[15][:] = ["X"] * width        # guarantees a solid floor
         # g[15][6:8] = ["X","X"]
@@ -171,17 +181,18 @@ class Individual_Grid(object):
 
 
         y = 0          
-        while y < 16: 
-            print("We are at height {}" .format(y))
-            print("======================================================\n")
+        while y < height: 
+            #print("We are at height {}" .format(y))
+            #print("======================================================\n")
             for x in range(0, width):
-                print("x = {}" .format(x))
+                #print("x = {}" .format(x))
 
                 # # *** Removes one-space gaps. (BREAKS EVERYTHING AHHHHHHH) ***
-                # if g[y][x] is not "-" or "o" or "E":
-                #     if (y + 2) < height and g[y+1][x] is "-" or "o":
-                #         if (y + 2) < height and g[y+2][x] is not "-" or "o" or "E":
-                #             g[y][x] = "-"
+                # if g[y][x] != "-" or g[y][x] != "o" or g[y][x] != "E":
+                #     if (y + 2) < height and g[y+1][x] == "-" or g[y+1][x] == "o":
+                #         g[y][x] = "-"
+                        # if (y + 2) < height-2 and g[y+2][x] is not "-" or "o" or "E":
+                        #     g[y][x] = "-"
                 #     # same thing for space above
                 #     if (y - 2) >= 0 and g[y-1][x] is "-" or "o":
                 #         if (y - 2) >= 0 and g[y-2][x] is not "-" or "o" or "E":
@@ -189,7 +200,7 @@ class Individual_Grid(object):
 
                 # *** Replaces all floating pipes with empty spaces. ***
                 if g[y][x] == "|" or g[y][x] == "T":
-                    print("We have found a pipe.")
+                    #print("We have found a pipe.")
 
                     # ** Also gets rid of grounded tops without a segment below. **
                     if y == 14 and g[y][x] == "T":
@@ -201,15 +212,15 @@ class Individual_Grid(object):
 
                     # ** Makes sure to not delete pipes actually extending from ground. **
                     y2 = y
-                    while y2 < 15:
+                    while y2 < height-1:
                         if g[y2+1][x:x+2] == ["X","X"]:
-                            print("We have hit the ground floor!")
+                            #print("We have hit the ground floor!")
                             break
                         elif g[y2+1][x] == "|":
-                            print("We have found another pipe segment below!")     
+                            #print("We have found another pipe segment below!")     
                             y2 += 1
                         else:
-                            print("There is nothing below! Delete the bastard.")
+                            #print("There is nothing below! Delete the bastard.")
                             if g[y-1][x] == "T":     # delete the new top too
                                 g[y-1][x] = "-"     
                             g[y][x] = "-"
