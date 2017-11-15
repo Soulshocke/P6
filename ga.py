@@ -518,6 +518,7 @@ def roulette_wheel(population):
 
     return population[0]
 
+
 def tournament_selection(population):
     #randomly choose k individuals
     smpl = []
@@ -534,8 +535,15 @@ def tournament_selection(population):
 
 def generate_successors(population):
     results = []
+    # if len(population) > 1:
+    #     for i in range(0, len(population)):
+    #         parent1 = roulette_wheel(population)
+    #         parent2 = tournament_selection(population)
+    #         child = parent1.generate_children(parent2)
+    #         results.append(child)
     # STUDENT Design and implement this
     # Hint: Call generate_children() on some individuals and fill up results.
+
     
     x = 0
     while x < len(population):
@@ -552,6 +560,7 @@ def generate_successors(population):
 
 def ga():
     # STUDENT Feel free to play with this parameter
+
     pop_limit = 32
     # Code to parallelize some computations
     batches = os.cpu_count()
@@ -577,6 +586,8 @@ def ga():
         try:
             while True:
                 now = time.time()
+                if len(population) <= 25:
+                    break
                 # Print out statistics
                 if generation > 0:
                     best = max(population, key=Individual.fitness)
