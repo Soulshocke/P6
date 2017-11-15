@@ -115,8 +115,10 @@ class Individual_Grid(object):
                     new_genome[y-1][x] = pipe
             
                 # encourage grouping of blocks
-                if new_genome[y][x-1] != new_genome[y][x] and new_genome[y][x-1] != "m":
+                if new_genome[y][x-1] != new_genome[y][x] and new_genome[y][x-1] is not "m":
                     if new_genome[y][x-1] is "X" or "B" or "?" or "M" and new_genome[y][x-1] is not "|" or "T" and y != 15:
+                        if x > width - 3:
+                            break
                         p_1 = .25
                         if random.random() <= p_1:
                             solids = ["X","B","?","M"]
@@ -212,8 +214,17 @@ class Individual_Grid(object):
                 
         g[15][0] = "X"        
         g[14][0] = "m"
-        g[7][-1] = "v"
-        g[8:14][-1] = ["f"] * 6
+        g[7][width-1] = "v"
+        g[7][width-2] = "-"
+        g[7][width-3] = "-"
+        a = 8
+        while a < 15:
+            g[a][width-1] = "f"
+            g[a][width-2] = "-"
+            g[a][width-3] = "-"
+            a += 1
+        #g[8:14][width-1] = "f"
+        g[15][width-1] = "X"
         g[14:16][-1] = ["X", "X"]
         return cls(g)
 
@@ -358,8 +369,8 @@ class Individual_DE(object):
 
     def generate_children(self, other):
         # STUDENT How does this work?  Explain it in your writeup.
-        pa = random.randint(0, len(self.genome) - 1)
-        pb = random.randint(0, len(other.genome) - 1)
+        pa = random.randint(0, len(self.genome) - 1) if len(self.genome) > 0 else 0
+        pb = random.randint(0, len(other.genome) - 1) if len(other.genome) > 0 else 0
         a_part = self.genome[:pa] if len(self.genome) > 0 else []
         b_part = other.genome[pb:] if len(other.genome) > 0 else []
         ga = a_part + b_part
@@ -437,7 +448,7 @@ class Individual_DE(object):
         return Individual_DE(g)
 
 
-Individual = Individual_Grid
+Individual = Individual_DE
 
 # (1) Calculate total_sum of all fitnesses in population.
 # (2) Generate random number rand_num from interval 0 to SUM.
@@ -491,8 +502,9 @@ def generate_successors(population):
         func_weights = [0.5,0.5]
         func = random.choices(functions, weights=func_weights, k=1)
         parent = func[0](population)
-        child = parent.generate_children(population[x])
-        results.append(child)
+        child1, child2 = parent.generate_children(population[x])
+        results.append(child1)
+        results.append(child2)
         x += 1
     return results
 
