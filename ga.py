@@ -89,8 +89,8 @@ class Individual_Grid(object):
                 # STUDENT Which one should you take?  Self, or other?  Why?
                 # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
                 
-                #if x > cross_point:
-                    #new_genome[y][x] = other.genome[y][x]
+                if x > cross_point:
+                    new_genome[y][x] = other.genome[y][x]
                     # choose based on fitness?
                     # fitness doesn't take constraints into account, lots of constraints happen here
                     #if self.fitness() > other.fitness():
@@ -100,8 +100,8 @@ class Individual_Grid(object):
                 
                 #make into function, but not as a part of the class
                 #replace floating tops
-                if new_genome[y][x] is "T" and new_genome[y+1][x] is not "|":
-                    new_genome[y][x] = "-"
+                #if new_genome[y][x] is "T" and new_genome[y+1][x] is not "|":
+                    #new_genome[y][x] = "-"
                                     
                 # top all segments or add to them
                 if (y - 1) >= 0 and new_genome[y][x] is "|":
@@ -114,8 +114,22 @@ class Individual_Grid(object):
                     pipe = "T"
                     new_genome[y-1][x] = pipe
             
-                # ?, M, and B blocks must be breakable
-        
+                # encourage grouping of blocks
+                if new_genome[y][x-1] != new_genome[y][x] and new_genome[y][x-1] != "m":
+                    if new_genome[y][x-1] is "X" or "B" or "?" or "M" and new_genome[y][x-1] is not "|" or "T" and y != 15:
+                        p_1 = .25
+                        if random.random() <= p_1:
+                            solids = ["X","B","?","M"]
+                            solid_p = [0.3,0.45,0.15,0.1]
+                            choice = random.choices(solids, weights=solid_p, k = 1)
+                            new_genome[y][x] = choice[0]
+                    else:
+                        probability = .20
+                        if random.random() <= probability:
+                            new_genome[y][x] = new_genome[y][x-1]
+                    
+                
+        """
                 # no one-space gaps
                 if new_genome[y][x] is not "-" or "o" or "E":
                     if (y + 2) < height and new_genome[y+1][x] is "-" or "o":
@@ -125,7 +139,7 @@ class Individual_Grid(object):
                     if (y - 2) >= 0 and new_genome[y-1][x] is "-" or "o":
                         if (y - 2) >= 0 and new_genome[y-2][x] is not "-" or "o" or "E":
                             new_genome[y][x] = "-"
-                
+                """
         # do mutation; note we're returning a one-element tuple here
         return (Individual_Grid(new_genome))
     
@@ -151,7 +165,7 @@ class Individual_Grid(object):
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        probs = [0.85,0.02,0.01,0.01,0.01,0.07,0.01,0.01,0.01]
+        probs = [0.89,0.02,0.01,0.01,0.01,0.03,0.01,0.01,0.01]
         g = [random.choices(options, weights=probs, k=width) for row in range(15)]
         floor_probs = [0.20,0.75,0,0,0,0,0.05,0,0]
         h = random.choices(options, weights=floor_probs, k=width)
@@ -184,7 +198,7 @@ class Individual_Grid(object):
                 pipe = random.choices(cont, weights=cont_probs, k=1)"""
             pipe = "T"
             g[y-1][x] = pipe
-        
+        """
         # no one-space gaps
         if g[y][x] is not "-" or "o" or "E":
             if (y + 2) < height and g[y+1][x] is "-" or "o":
@@ -194,6 +208,7 @@ class Individual_Grid(object):
             if (y - 2) >= 0 and g[y-1][x] is "-" or "o":
                 if (y - 2) >= 0 and g[y-2][x] is not "-" or "o" or "E":
                     g[y][x] = "-"
+                    """
                 
         g[15][0] = "X"        
         g[14][0] = "m"
