@@ -129,7 +129,7 @@ class Individual_Grid(object):
                             new_genome[y][x] = new_genome[y][x-1]
                     
                 
-        #"""
+        """
                 # no one-space gaps
                 if new_genome[y][x] is "X" or "B" or "?" or "M" or "T":
                     if (y - 2) >= 0 and new_genome[y-1][x] is "-" or "o" or "E":
@@ -139,7 +139,7 @@ class Individual_Grid(object):
                     if (y + 2) < height and new_genome[y+1][x] is "-" or "o" or "E":
                         if (y + 2) < height and new_genome[y+2][x] is "X" or "B" or "?" or "M" or "T":
                             new_genome[y][x] = "-"
-                #"""
+                """
         # do mutation; note we're returning a one-element tuple here
         return (Individual_Grid(new_genome))
     
