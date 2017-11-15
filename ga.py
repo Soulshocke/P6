@@ -143,6 +143,7 @@ class Individual_Grid(object):
                             new_genome[y][x] = "-"
                 """
         # do mutation; note we're returning a one-element tuple here
+        #return (Individual_Grid(new_genome),)
         return (Individual_Grid(new_genome))
     
     # Turn the genome into a level string (easy for this genome)
@@ -455,22 +456,23 @@ Individual = Individual_DE
 # (3) Go through population, and select individual when partial_sum is more than or equal to rand_num.
 # (4) Repeat steps 2 and 3 until an individual is selected.
 def roulette_wheel(population):
-	total_sum = 0
-	#print(len(population))
-	for i in range(0, len(population)):
-		total_sum += population[i].fitness()
-		#print(population[i].fitness())
+    total_sum = 0
+    #print(len(population))
+    for i in range(0, len(population)):
+        total_sum += population[i].fitness()
+        #print(population[i].fitness())
 
-	rand_num = random.uniform(0, total_sum)
-	partial_sum = 0
-	for i in range(0,len(population)):
-		partial_sum += population[i].fitness()
-		#print("\n {0} >= {1}".format(partial_sum, rand_num))
-		if partial_sum >= rand_num:
-			#print("We stopped at individual {}. \n".format(i))
-			return population[i]
+    rand_num = random.uniform(0, total_sum)
+    partial_sum = 0
+    for i in range(0,len(population)):
+        partial_sum += population[i].fitness()
+        print("\n {0} >= {1}".format(partial_sum, rand_num))
+        if partial_sum >= rand_num:
+            print("We stopped at individual {}. \n".format(i))
+            return population[i]
 
-	return population[0]
+    return population[0]
+
 
 def tournament_selection(population):
     #randomly choose k individuals
@@ -488,8 +490,15 @@ def tournament_selection(population):
 
 def generate_successors(population):
     results = []
+    # if len(population) > 1:
+    #     for i in range(0, len(population)):
+    #         parent1 = roulette_wheel(population)
+    #         parent2 = tournament_selection(population)
+    #         child = parent1.generate_children(parent2)
+    #         results.append(child)
     # STUDENT Design and implement this
     # Hint: Call generate_children() on some individuals and fill up results.
+
     
     x = 0
     # Do a similar thing to tournament selection and just use 10 random parent, shorter loop
@@ -511,7 +520,8 @@ def generate_successors(population):
 
 def ga():
     # STUDENT Feel free to play with this parameter
-    pop_limit = 480
+
+    pop_limit = 32
     # Code to parallelize some computations
     batches = os.cpu_count()
     if pop_limit % batches != 0:
@@ -536,6 +546,8 @@ def ga():
         try:
             while True:
                 now = time.time()
+                if len(population) <= 25:
+                    break
                 # Print out statistics
                 if generation > 0:
                     best = max(population, key=Individual.fitness)
@@ -548,10 +560,12 @@ def ga():
                             f.write("".join(row) + "\n")
                 generation += 1
                 # STUDENT Determine stopping condition
-                stop_condition = False
-                if generation is 4:
-                    stop_condition = True
-                if stop_condition:
+                stop_condition = generation
+                if stop_condition > 1:
+                # stop_condition = False
+                # if generation is 2:
+                #     stop_condition = True
+                # if stop_condition:
                     break
                 # STUDENT Also consider using FI-2POP as in the Sorenson & Pasquier paper
                 gentime = time.time()
