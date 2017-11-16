@@ -25,7 +25,7 @@ options = [
     #"v",  # a flagpole, do not generate
     #"m"  # mario's start position, do not generate
 ]
-probs = [0.60,0.05,0.02,0.01,0.03,0.04,0.20,0.02,0.03]
+probs = [0.89,0.02,0.01,0.01,0.01,0.03,0.01,0.01,0.01]
 
 # The level as a grid of tiles
 
@@ -64,9 +64,6 @@ class Individual_Grid(object):
         return self._fitness
 
     # Mutate a genome into a new genome.  Note that this is a _genome_, not an individual!
-    # (1) Only mutate if fitness is found to be lower than 5.
-    # (2) Randomly choose the number of metrics to be modified, up to half.
-    # (3) Randomly choose which such metrics will be modified.
     def mutate(self, genome):
         # STUDENT implement a mutation operator, also consider not mutating this individual
         # STUDENT also consider weighting the different tile types so it's not uniformly random
@@ -74,66 +71,81 @@ class Individual_Grid(object):
 
         if self.fitness() < 5:
 
-        #     # Easy access to each option's respective global weight.
-        #     option_probs = {}
-        #     i = 0
-        #     for option in options:
-        #         option_probs[option] = probs[i]
-        #         i += 1
+            # *** Overwrites some existing options with mutations. ***
+            #genome = [random.choices(options, weights=new_probs, k=width) for row in range(height)]
 
-        #     num_mutations = random.randint(1,5)
-        #     mutation_probs = [0.12,0.11,0.11,0.11,0.11,0.11,0.11,0.11,0.11]
-        #     chosen_mutations = random.sample(options, num_mutations)
+            left = 0
+            right = width - 1
+            for y in range(height):
+                # Randomly choose how many tiles for every row get changed.
+                num_mutations = random.randint(1,width-1)
+                # Randomly choose which tiles will be changed.
+                new_tiles = random.sample(range(0,200), num_mutations)
 
-        #     # Overwrite weights for mutated options.
-        #     for chosen in chosen_mutations:
-        #         option_probs[chosen] = random.uniform(0.01,1)
-        #     new_probs = list(option_probs.values())
+                for x in range(left, right):
 
+                    for tile in new_tiles:
+                        if x == tile:
+                            new_thing = random.choices(options, weights=probs, k=1)
+                            genome[y][x] = new_thing[0]
+                            new_tiles.remove(tile)
 
-        #     # *** Overwrites some existing options with mutations. ***
-        #     genome = [random.choices(options, weights=new_probs, k=width) for row in range(height)]
+                    # *** Replaces all floating pipes with empty spaces. ***
+                    if genome[y][x] == "|" or genome[y][x] == "T":
 
-            # left = 0
-            # right = width - 1
-            # for y in range(height):
-            #     for x in range(left, right):
+                        # ** Also gets rid of grounded tops without a segment below. **
+                        if y == 14 and genome[y][x] == "T":
+                            genome[y][x] = "-"
 
+                        # ** Also adds top to all topless segments, ONLY IF segment is not at the highest. (prevents breaking) **
+                        if y > 1 and genome[y][x] == "|" and genome[y-1][x] != "|" and genome[y-1][x] != "T":
+                            genome[y-1][x] = "T"
+                        elif y == 15 and genome[y][x] == "|":
+                            genome[y-1][x] = "T"    
 
-            #         # *** Replaces all floating pipes with empty spaces. ***
-            #         if genome[y][x] == "|" or genome[y][x] == "T":
+                        # ** Makes sure to not delete pipes actually extending from ground or abyss. **
+                        y2 = y
+                        while y2 < height-1:
+                            if y == 14 and genome[y2+1][x:x+2] == ["X","X"]:
+                                break
+                            elif y == 15:
+                                break
+                            elif genome[y2+1][x] == "|":   
+                                y2 += 1
+                            else:
+                                if genome[y-1][x] == "T":     # delete the new top too
+                                    genome[y-1][x] = "-"     
+                                genome[y][x] = "-"
+                                break
 
-            #             # ** Also gets rid of grounded tops without a segment below. **
-            #             if y == 14 and genome[y][x] == "T":
-            #                 genome[y][x] = "-"
+                    # encourage grouping of blocks
+                    if genome[y][x-1] != genome[y][x] and genome[y][x-1] != "m":
+                        if genome[y][x-1] is "X" or "B" or "?" or "M" and genome[y][x-1] is not "|" or "T" and y != 15:
+                            p_1 = .25
+                            if random.random() <= p_1:
+                                solids = ["X","B","?","M"]
+                                solid_p = [0.3,0.45,0.15,0.1]
+                                choice = random.choices(solids, weights=solid_p, k = 1)
+                                genome[y][x] = choice[0]
+                        else:
+                            probability = .20
+                            if random.random() <= probability:
+                                genome[y][x] = genome[y][x-1]
 
-            #             # ** Also adds top to all topless segments, ONLY IF segment is not at the highest. (prevents breaking) **
-            #             if y > 1 and genome[y][x] == "|" and genome[y-1][x] != "|" and genome[y-1][x] != "T":
-            #                 genome[y-1][x] = "T"    
+            # *** Removes anything that is within Mario's spawn radius. (so he can get out)***
+            y = 14
+            while y > 9:
+                for x in range(0, 5):
+                    if y == 14 and x == 0:      # don't destroy poor Mario
+                         continue
+                    else:
+                        genome[y][x] = "-"
+                y -= 1 
 
-            #             # ** Makes sure to not delete pipes actually extending from ground. **
-            #             y2 = y
-            #             while y2 < height-1:
-            #                 if y == 14 and genome[y2+1][x:x+2] == ["X","X"]:
-            #                     break
-            #                 elif genome[y2+1][x] == "|":   
-            #                     y2 += 1
-            #                 else:
-            #                     if genome[y-1][x] == "T":     # delete the new top too
-            #                         genome[y-1][x] = "-"     
-            #                     genome[y][x] = "-"
-            #                     break
-
-            # # *** Removes anything that is within Mario's spawn radius. (so he can get out)***
-            # y = 14
-            # while y > 9:
-            #     for x in range(0, 5):
-            #         if y == 14 and x == 0:      # don't destroy poor Mario
-            #              continue
-            #         else:
-            #             genome[y][x] = "-"
-            #     y -= 1 
-
+            genome[14][0] = "m"                  # Mario start point (do not change)
+            genome[15][0] = "X"
+            return genome
+        else:
             return genome
 
     # Create zero or more children from self and other
@@ -141,6 +153,7 @@ class Individual_Grid(object):
         new_genome = copy.deepcopy(self.genome)
         # Leaving first and last columns alone...
         # do crossover with other
+        # doing single-point crossover (for now)
         left = 1
         right = width - 1
         for y in range(height):
@@ -149,31 +162,42 @@ class Individual_Grid(object):
                 # STUDENT Which one should you take?  Self, or other?  Why?
                 # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
                 
-                #if x > cross_point:
-                    #new_genome[y][x] = other.genome[y][x]
-                    # choose based on fitness?
-                    # fitness doesn't take constraints into account, lots of constraints happen here
-                    #if self.fitness() > other.fitness():
-                        #new_genome[y][x] = self.genome[y][x]
-                    #if other.fitness() >= self.fitness():
-                        #new_genome[y][x] = other.genome[y][x]
-
-                # # *** Removes one-space gaps. (BREAKS EVERYTHING AHHHHHHH) ***
-                # if new_genome[y][x] is not "-" or "o" or "E":
-                #     if (y + 2) < height and new_genome[y+1][x] is "-" or "o":
-                #         if (y + 2) < height and new_genome[y+2][x] is not "-" or "o" or "E":
+                if x > cross_point:
+                    new_genome[y][x] = other.genome[y][x]
+                                    
+                # top all segments or add to them
+                if (y - 1) >= 0 and new_genome[y][x] is "|":
+                    pipe = "T"
+                    new_genome[y-1][x] = pipe
+            
+                # encourage grouping of blocks
+                if new_genome[y][x-1] != new_genome[y][x] and new_genome[y][x-1] != "m":
+                    if new_genome[y][x-1] is "X" or "B" or "?" or "M" and new_genome[y][x-1] is not "|" or "T" and y != 15:
+                        p_1 = .25
+                        if random.random() <= p_1:
+                            solids = ["X","B","?","M"]
+                            solid_p = [0.3,0.45,0.15,0.1]
+                            choice = random.choices(solids, weights=solid_p, k = 1)
+                            new_genome[y][x] = choice[0]
+                    else:
+                        probability = .20
+                        if random.random() <= probability:
+                            new_genome[y][x] = new_genome[y][x-1]
+                    
+                
+        #"""
+                # # no one-space gaps
+                # if new_genome[y][x] is "X" or "B" or "?" or "M" or "T":
+                #     if (y - 2) >= 0 and new_genome[y-1][x] is "-" or "o" or "E":
+                #         if (y - 2) >= 0 and new_genome[y-2][x] is "X" or "B" or "?" or "M" or "T":
                 #             new_genome[y][x] = "-"
                 #     # same thing for space above
-                #     if (y - 2) >= 0 and new_genome[y-1][x] is "-" or "o":
-                #         if (y - 2) >= 0 and new_genome[y-2][x] is not "-" or "o" or "E":
+                #     if (y + 2) < height and new_genome[y+1][x] is "-" or "o" or "E":
+                #         if (y + 2) < height and new_genome[y+2][x] is "X" or "B" or "?" or "M" or "T":
                 #             new_genome[y][x] = "-"
-                                    
-            
-                # ?, M, and B blocks must be breakable
-                pass
-
-        # do mutation; note we (were) returning a one-element tuple here
-        #return (Individual_Grid(new_genome))
+                #"""
+        # do mutation; note we're returning a one-element tuple here
+        #return (Individual_Grid(new_genome),)
         return (Individual_Grid(self.mutate(new_genome)))
 
     # Turn the genome into a level string (easy for this genome)
@@ -206,7 +230,12 @@ class Individual_Grid(object):
      
         # g[0][6] = "X"    #<-- this breaks everything!
          
-        g[15][:] = ["X"] * width        # guarantees a solid floor
+        #g[15][:] = ["X"] * width        # guarantees a solid floor
+        floor_probs = [0.20,0.75,0,0,0,0,0.05,0,0]
+        h = random.choices(options, weights=floor_probs, k=width)
+        #theoretically adds the floor row with h
+        g.append(h)
+
 
         y = 0          
         while y < height: 
@@ -214,17 +243,6 @@ class Individual_Grid(object):
             #print("======================================================\n")
             for x in range(0, width):
                 #print("x = {}" .format(x))
-
-                # # *** Removes one-space gaps. (BREAKS EVERYTHING AHHHHHHH) ***
-                # if g[y][x] != "-" or g[y][x] != "o" or g[y][x] != "E":
-                #     if (y + 2) < height and g[y+1][x] == "-" or g[y+1][x] == "o":
-                #         g[y][x] = "-"
-                        # if (y + 2) < height-2 and g[y+2][x] is not "-" or "o" or "E":
-                        #     g[y][x] = "-"
-                #     # same thing for space above
-                #     if (y - 2) >= 0 and g[y-1][x] is "-" or "o":
-                #         if (y - 2) >= 0 and g[y-2][x] is not "-" or "o" or "E":
-                #             g[y][x] = "-"
 
                 # *** Replaces all floating pipes with empty spaces. ***
                 if g[y][x] == "|" or g[y][x] == "T":
@@ -270,8 +288,16 @@ class Individual_Grid(object):
         g[14][0] = "m"                  # Mario start point (do not change)
         g[15][0] = "X"                  # guarantees Mario doesn't fall at spawn
         g[7][-1] = "v"                  # (leave alone) flagpole
-        g[8:14][-1] = ["f"] * 6         # (leave alone) flag
-        g[14:16][-1] = ["X", "X"]
+        #g[8:14][-1] = ["f"] * 6        # (leave alone) flag
+        y = 8
+        while y < 14:                   # hardcode both flagpole and flag
+            g[y][width-1] = "f"
+            y += 1
+        #g[14:16][-1] = ["X", "X"]
+        y = 14
+        while y < 16:
+            g[y][width-1] = "X"
+            y += 1
         return cls(g)
 
 
@@ -495,6 +521,7 @@ class Individual_DE(object):
 
 
 Individual = Individual_Grid
+#Individual = Individual_DE
 
 # (1) Calculate total_sum of all fitnesses in population.
 # (2) Generate random number rand_num from interval 0 to SUM.
@@ -535,16 +562,8 @@ def tournament_selection(population):
 
 def generate_successors(population):
     results = []
-    # if len(population) > 1:
-    #     for i in range(0, len(population)):
-    #         parent1 = roulette_wheel(population)
-    #         parent2 = tournament_selection(population)
-    #         child = parent1.generate_children(parent2)
-    #         results.append(child)
     # STUDENT Design and implement this
     # Hint: Call generate_children() on some individuals and fill up results.
-
-    
     x = 0
     while x < len(population):
         #choose between which selection function
@@ -555,6 +574,18 @@ def generate_successors(population):
         child = parent.generate_children(population[x])
         results.append(child)
         x += 1
+
+    # Activate for Individual_DE. 
+    # while x < len(population):
+    #     #choose between which selection function
+    #     functions = [roulette_wheel, tournament_selection]
+    #     func_weights = [0.5,0.5]
+    #     func = random.choices(functions, weights=func_weights, k=1)
+    #     parent = func[0](population)
+    #     child1, child2 = parent.generate_children(population[x])
+    #     results.append(child1)
+    #     results.append(child2)
+    #     x += 1
     return results
 
 
@@ -586,8 +617,8 @@ def ga():
         try:
             while True:
                 now = time.time()
-                if len(population) <= 25:
-                    break
+                # if len(population) <= 25:
+                #     break
                 # Print out statistics
                 if generation > 0:
                     best = max(population, key=Individual.fitness)
@@ -602,7 +633,7 @@ def ga():
                 print(str(generation))
                 # STUDENT Determine stopping condition
                 stop_condition = False
-                if generation is 7:
+                if generation is 5:
                     stop_condition = True
                 if stop_condition:
                     break

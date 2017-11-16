@@ -19,12 +19,13 @@ options = [
     "B",  # a breakable block
     "o",  # a coin
     "|",  # a pipe segment
-    "T",  # a pipe top
+    "T",  # a pipe top  (must be on top of a pipe sergment)
     "E",  # an enemy
     #"f",  # a flag, do not generate
     #"v",  # a flagpole, do not generate
     #"m"  # mario's start position, do not generate
 ]
+probs = [0.89,0.02,0.01,0.01,0.01,0.03,0.01,0.01,0.01]
 
 # The level as a grid of tiles
 
@@ -46,7 +47,7 @@ class Individual_Grid(object):
         # STUDENT Modify this, and possibly add more metrics.  You can replace this with whatever code you like.
         coefficients = dict(
             meaningfulJumpVariance=0.5,
-            negativeSpace=0.6,
+            negativeSpace=2.5,
             pathPercentage=0.5,
             emptyPercentage=0.6,
             linearity=-0.5,
@@ -63,18 +64,78 @@ class Individual_Grid(object):
         return self._fitness
 
     # Mutate a genome into a new genome.  Note that this is a _genome_, not an individual!
+    # (1) Only mutate if fitness is found to be lower than 5.
+    # (2) Randomly choose the number of metrics to be modified, up to half.
+    # (3) Randomly choose which such metrics will be modified.
     def mutate(self, genome):
         # STUDENT implement a mutation operator, also consider not mutating this individual
         # STUDENT also consider weighting the different tile types so it's not uniformly random
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
 
-        left = 1
-        right = width - 1
-        for y in range(height):
-            for x in range(left, right):
-                pass
-        return genome
-    
+        if self.fitness() < 5:
+
+        #     # Easy access to each option's respective global weight.
+        #     option_probs = {}
+        #     i = 0
+        #     for option in options:
+        #         option_probs[option] = probs[i]
+        #         i += 1
+
+        #     num_mutations = random.randint(1,5)
+        #     mutation_probs = [0.12,0.11,0.11,0.11,0.11,0.11,0.11,0.11,0.11]
+        #     chosen_mutations = random.sample(options, num_mutations)
+
+        #     # Overwrite weights for mutated options.
+        #     for chosen in chosen_mutations:
+        #         option_probs[chosen] = random.uniform(0.01,1)
+        #     new_probs = list(option_probs.values())
+
+
+        #     # *** Overwrites some existing options with mutations. ***
+        #     genome = [random.choices(options, weights=new_probs, k=width) for row in range(height)]
+
+            # left = 0
+            # right = width - 1
+            # for y in range(height):
+            #     for x in range(left, right):
+
+
+            #         # *** Replaces all floating pipes with empty spaces. ***
+            #         if genome[y][x] == "|" or genome[y][x] == "T":
+
+            #             # ** Also gets rid of grounded tops without a segment below. **
+            #             if y == 14 and genome[y][x] == "T":
+            #                 genome[y][x] = "-"
+
+            #             # ** Also adds top to all topless segments, ONLY IF segment is not at the highest. (prevents breaking) **
+            #             if y > 1 and genome[y][x] == "|" and genome[y-1][x] != "|" and genome[y-1][x] != "T":
+            #                 genome[y-1][x] = "T"    
+
+            #             # ** Makes sure to not delete pipes actually extending from ground. **
+            #             y2 = y
+            #             while y2 < height-1:
+            #                 if y == 14 and genome[y2+1][x:x+2] == ["X","X"]:
+            #                     break
+            #                 elif genome[y2+1][x] == "|":   
+            #                     y2 += 1
+            #                 else:
+            #                     if genome[y-1][x] == "T":     # delete the new top too
+            #                         genome[y-1][x] = "-"     
+            #                     genome[y][x] = "-"
+            #                     break
+
+            # # *** Removes anything that is within Mario's spawn radius. (so he can get out)***
+            # y = 14
+            # while y > 9:
+            #     for x in range(0, 5):
+            #         if y == 14 and x == 0:      # don't destroy poor Mario
+            #              continue
+            #         else:
+            #             genome[y][x] = "-"
+            #     y -= 1 
+
+            return genome
+
     # Create zero or more children from self and other
     def generate_children(self, other):
         new_genome = copy.deepcopy(self.genome)
@@ -142,8 +203,8 @@ class Individual_Grid(object):
                 #"""
         # do mutation; note we're returning a one-element tuple here
         #return (Individual_Grid(new_genome),)
-        return (Individual_Grid(new_genome))
-    
+        return (Individual_Grid(self.mutate(new_genome)))
+
     # Turn the genome into a level string (easy for this genome)
     def to_level(self):
         return self.genome
@@ -162,60 +223,86 @@ class Individual_Grid(object):
             g[col][-1] = "X"
         return cls(g)
 
+
     @classmethod
     def random_individual(cls):
         # STUDENT consider putting more constraints on this to prevent pipes in the air, etc
         # STUDENT also consider weighting the different tile types so it's not uniformly random
-        probs = [0.89,0.02,0.01,0.01,0.01,0.03,0.01,0.01,0.01]
-        g = [random.choices(options, weights=probs, k=width) for row in range(15)]
+        g = [random.choices(options, weights=probs, k=width) for row in range(height)]
+
+        # *** Below is what overwrites the random choices: ***
+        # ----------------------------------------------------------------------------------------
+     
+        # g[0][6] = "X"    #<-- this breaks everything!
+         
+        #g[15][:] = ["X"] * width        # guarantees a solid floor
         floor_probs = [0.20,0.75,0,0,0,0,0.05,0,0]
         h = random.choices(options, weights=floor_probs, k=width)
         #theoretically adds the floor row with h
         g.append(h)
-        
-        # Replaces all floating pipes with empty spaces.
-        y = 13          #1 space above ground floor
-        while y > -1:
-            for x in range(0, width):
-                if g[y][x] == "|" or g[y][x] == "T":
 
-                    #check if connected down to the ground
+
+        y = 0          
+        while y < height: 
+            #print("We are at height {}" .format(y))
+            #print("======================================================\n")
+            for x in range(0, width):
+                #print("x = {}" .format(x))
+
+                # *** Replaces all floating pipes with empty spaces. ***
+                if g[y][x] == "|" or g[y][x] == "T":
+                    #print("We have found a pipe.")
+
+                    # ** Also gets rid of grounded tops without a segment below. **
+                    if y == 14 and g[y][x] == "T":
+                        g[y][x] = "-"
+
+                    # ** Also adds top to all topless segments, ONLY IF segment is not at the highest. (prevents breaking) **
+                    if y > 1 and g[y][x] == "|" and g[y-1][x] != "|" and g[y-1][x] != "T":
+                        g[y-1][x] = "T"    
+
+                    # ** Makes sure to not delete pipes actually extending from ground. **
                     y2 = y
-                    while y2 < 15:
-                        if g[y2+1][x] == "|":     
+                    while y2 < height-1:
+                        if y == 14 and g[y2+1][x:x+2] == ["X","X"]:
+                            #print("We have hit the ground floor!")
+                            break
+                        elif g[y2+1][x] == "|":
+                            #print("We have found another pipe segment below!")     
                             y2 += 1
                         else:
+                            #print("There is nothing below! Delete the bastard.")
+                            if g[y-1][x] == "T":     # delete the new top too
+                                g[y-1][x] = "-"     
                             g[y][x] = "-"
                             break
-            y -= 1
-        
-        # top all segments or add to them
-        if (y - 1) >= 0 and g[y][x] is "|":
-            """cont = ['|','T']
-            if (y - 1) is 0:
-                cont_probs = [0, 1]
+            y += 1 
+
+
+        # *** Removes anything that is within Mario's spawn radius. (so he can get out)***
+        y = 14
+        while y > 9:
+            for x in range(0, 5):
+                if y == 14 and x == 0:      # don't destroy poor Mario
+                     continue
                 else:
-                    cont_probs = [0.2, 0.8]
-                pipe = random.choices(cont, weights=cont_probs, k=1)"""
-            pipe = "T"
-            g[y-1][x] = pipe
-        """
-        # no one-space gaps
-        if g[y][x] is not "-" or "o" or "E":
-            if (y + 2) < height and g[y+1][x] is "-" or "o":
-                if (y + 2) < height and g[y+2][x] is not "-" or "o" or "E":
                     g[y][x] = "-"
-            # same thing for space above
-            if (y - 2) >= 0 and g[y-1][x] is "-" or "o":
-                if (y - 2) >= 0 and g[y-2][x] is not "-" or "o" or "E":
-                    g[y][x] = "-"
-                    """
-                
-        g[15][0] = "X"        
-        g[14][0] = "m"
-        g[7][-1] = "v"
-        g[8:14][-1] = ["f"] * 6
-        g[14:16][-1] = ["X", "X"]
+            y -= 1
+
+
+        g[14][0] = "m"                  # Mario start point (do not change)
+        g[15][0] = "X"                  # guarantees Mario doesn't fall at spawn
+        g[7][-1] = "v"                  # (leave alone) flagpole
+        #g[8:14][-1] = ["f"] * 6         # (leave alone) flag
+        y = 8
+        while y < 14:
+            g[y][width-1] = "f"
+            y += 1
+        #g[14:16][-1] = ["X", "X"]
+        y = 14
+        while y < 16:
+            g[y][width-1] = "X"
+            y += 1
         return cls(g)
 
 
@@ -260,7 +347,7 @@ class Individual_DE(object):
             negativeSpace=0.6,
             pathPercentage=0.5,
             emptyPercentage=0.6,
-            linearity=-0.5,
+            linearity=0.5,
             solvability=2.0
         )
         penalties = 0
@@ -359,8 +446,8 @@ class Individual_DE(object):
 
     def generate_children(self, other):
         # STUDENT How does this work?  Explain it in your writeup.
-        pa = random.randint(0, len(self.genome) - 1)
-        pb = random.randint(0, len(other.genome) - 1)
+        pa = random.randint(0, len(self.genome) - 1) if len(self.genome) > 0 else 0
+        pb = random.randint(0, len(other.genome) - 1) if len(other.genome) > 0 else 0
         a_part = self.genome[:pa] if len(self.genome) > 0 else []
         b_part = other.genome[pb:] if len(other.genome) > 0 else []
         ga = a_part + b_part
@@ -455,9 +542,9 @@ def roulette_wheel(population):
     partial_sum = 0
     for i in range(0,len(population)):
         partial_sum += population[i].fitness()
-        print("\n {0} >= {1}".format(partial_sum, rand_num))
+        #print("\n {0} >= {1}".format(partial_sum, rand_num))
         if partial_sum >= rand_num:
-            print("We stopped at individual {}. \n".format(i))
+            #print("We stopped at individual {}. \n".format(i))
             return population[i]
 
     return population[0]
@@ -479,21 +566,9 @@ def tournament_selection(population):
 
 def generate_successors(population):
     results = []
-    # if len(population) > 1:
-    #     for i in range(0, len(population)):
-    #         parent1 = roulette_wheel(population)
-    #         parent2 = tournament_selection(population)
-    #         child = parent1.generate_children(parent2)
-    #         results.append(child)
     # STUDENT Design and implement this
     # Hint: Call generate_children() on some individuals and fill up results.
-
-    
     x = 0
-    # Do a similar thing to tournament selection and just use 10 random parent, shorter loop
-    # OR JUST ITERATE YOU DUNCE
-    #smpl = []
-    #smpl = random.sample(population, k=20)
     while x < len(population):
         #choose between which selection function
         functions = [roulette_wheel, tournament_selection]
@@ -534,8 +609,8 @@ def ga():
         try:
             while True:
                 now = time.time()
-                if len(population) <= 25:
-                    break
+                # if len(population) <= 25:
+                #     break
                 # Print out statistics
                 if generation > 0:
                     best = max(population, key=Individual.fitness)
@@ -547,13 +622,12 @@ def ga():
                         for row in best.to_level():
                             f.write("".join(row) + "\n")
                 generation += 1
+                print(str(generation))
                 # STUDENT Determine stopping condition
-                stop_condition = generation
-                if stop_condition > 1:
-                # stop_condition = False
-                # if generation is 2:
-                #     stop_condition = True
-                # if stop_condition:
+                stop_condition = False
+                if generation is 5:
+                    stop_condition = True
+                if stop_condition:
                     break
                 # STUDENT Also consider using FI-2POP as in the Sorenson & Pasquier paper
                 gentime = time.time()
